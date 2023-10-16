@@ -1,11 +1,12 @@
 import express from 'express'
 import 'dotenv/config'
-import mongoose from 'mongoose'
+import mongoose, { connect } from 'mongoose'
 import * as jwt from 'jsonwebtoken'
 import cors from 'cors'
 import { UserModel as User } from './models/User'
 import cookieParser from 'cookie-parser'
 import bcrypt from 'bcrypt'
+import websocket from 'ws'
 
 const mongodbConnection: string = process.env.DATABASE_URI!
 
@@ -46,7 +47,6 @@ app.post('/login', async (req, res) => {
   const userFound = await User.findOne<string | any>({ username })
   if (userFound) {
     const passOk = bcrypt.compareSync(password, userFound.password)
-    console.log('Logged')
     if (passOk) {
       jwt.sign({ userId: userFound._id, username }, jwtSecret, {}, (err, token) => {
         res.cookie('token', token, { sameSite: 'none', secure: true }).json({
@@ -75,4 +75,10 @@ app.post('/register', async (req, res) => {
   }
 })
 
-app.listen(port, () => console.log(`Server running on port: http://localhost:${port}/`))
+const server = app.listen(port, () => console.log(`Server running on port: http://localhost:${port}/`))
+
+const wss = new websocket.WebSocketServer({ server })
+
+wss.on('connection', (connection) => {
+  console.log('connected')
+})
