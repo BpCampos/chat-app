@@ -1,6 +1,6 @@
 import express from 'express'
 import 'dotenv/config'
-import mongoose, { connect } from 'mongoose'
+import mongoose from 'mongoose'
 import * as jwt from 'jsonwebtoken'
 import cors from 'cors'
 import { UserModel as User } from './models/User'
