@@ -1,12 +1,12 @@
 import express from 'express'
 import 'dotenv/config'
-import mongoose from 'mongoose'
+import mongoose, { connection } from 'mongoose'
 import * as jwt from 'jsonwebtoken'
 import cors from 'cors'
 import { UserModel as User } from './models/User'
 import cookieParser from 'cookie-parser'
 import bcrypt from 'bcrypt'
-import websocket from 'ws'
+import { WebSocketServer } from 'ws'
 
 const mongodbConnection: string = process.env.DATABASE_URI!
 
@@ -77,8 +77,23 @@ app.post('/register', async (req, res) => {
 
 const server = app.listen(port, () => console.log(`Server running on port: http://localhost:${port}/`))
 
-const wss = new websocket.WebSocketServer({ server })
+const wss = new WebSocketServer({ server })
+wss.on('connection', (connection: any, req: any, client: any) => {
+  const cookies = req.headers.cookie
+  if (cookies) {
+    const tokenCookieString = cookies.split(';').find((str: string) => str.startsWith('token='))
+    if (tokenCookieString) {
+      const token = tokenCookieString.split('=')[1]
+      if (token) {
+        jwt.verify(token, jwtSecret, {}, (err, userData) => {
+          if (err) throw err
+          const { userId, username }: any = userData
+          connection.userId = userId
+          connection.username = username
+        })
+      }
+    }
+  }
 
-wss.on('connection', (connection) => {
-  console.log('connected')
+  console.log([...wss.clients].map((c: any) => c.username))
 })
