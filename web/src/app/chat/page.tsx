@@ -8,7 +8,12 @@ export default function Chat() {
   useEffect(() => {
     const ws = new WebSocket('ws://localhost:3030')
     setWs(ws)
+    ws.addEventListener('message', handleMessage)
   }, [])
+
+  function handleMessage(e: any) {
+    console.log('new message: ', e)
+  }
 
   return (
     <div className="flex">

@@ -19,7 +19,7 @@ export default function RegisterAndLogin() {
   }
 
   if (loggedInUser) {
-    redirect('/chat')
+    return redirect('/chat')
   }
 
   return (
