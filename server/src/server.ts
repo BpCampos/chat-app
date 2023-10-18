@@ -78,7 +78,7 @@ app.post('/register', async (req, res) => {
 const server = app.listen(port, () => console.log(`Server running on port: http://localhost:${port}/`))
 
 const wss = new WebSocketServer({ server })
-wss.on('connection', (connection: any, req: any, client: any) => {
+wss.on('connection', (connection: any, req: any) => {
   const cookies = req.headers.cookie
   if (cookies) {
     const tokenCookieString = cookies.split(';').find((str: string) => str.startsWith('token='))
@@ -95,5 +95,11 @@ wss.on('connection', (connection: any, req: any, client: any) => {
     }
   }
 
-  console.log([...wss.clients].map((c: any) => c.username))
+  ;[...wss.clients].forEach((client) => {
+    client.send(
+      JSON.stringify({
+        online: [...wss.clients].map((c: any) => ({ userId: c.userId, username: c.username })),
+      })
+    )
+  })
 })
