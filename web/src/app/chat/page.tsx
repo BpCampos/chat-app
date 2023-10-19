@@ -1,6 +1,8 @@
 'use client'
+import OnlineUser from '@/components/OnlineUser'
 import { useEffect, useState } from 'react'
 import { AiOutlineSend } from 'react-icons/ai'
+import { BsChatLeftText } from 'react-icons/bs'
 
 interface User {
   userId: string
@@ -10,6 +12,7 @@ interface User {
 export default function Chat() {
   const [ws, setWs] = useState<null | WebSocket>(null)
   const [onlinePeople, setOnlinePeople] = useState<any>({})
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
 
   useEffect(() => {
     const ws = new WebSocket('ws://localhost:3030')
@@ -32,16 +35,27 @@ export default function Chat() {
     }
   }
 
+  function selectContact(userId: string) {
+    if (selectedUserId) {
+      setSelectedUserId(null)
+    } else {
+      setSelectedUserId(userId)
+    }
+  }
+
   return (
     <div className="bg-emerald-100">
-      <div className="flex w-[1660px] mx-auto border-black border">
-        <section className="w-1/4 h-[100vh] border-r border-black bg-slate-700 text-white overflow-hidden">
-          <div className="h-16 border-black border-b">
-            <h1 className="h-full flex items-center text-4xl font-bold justify-center pb-2 bg-slate-900">Pappo</h1>
+      <div className="flex max-w-[1660px] h-[100vh] mx-auto border-slate-500 border">
+        <section className="w-1/4 border-r border-black bg-slate-900 text-white overflow-hidden flex flex-col">
+          <div className="h-16 border-black border-b bg-slate-700 flex items-center text-3xl justify-center gap-5 pr-7">
+            <div className="pt-4">
+              <BsChatLeftText />
+            </div>
+            <h1 className="text-4xl font-bold">Pappo</h1>
           </div>
-          <div className="flex justify-around border-black h-16 items-center border-b">
+          <div className="flex justify-around h-16 items-center border-b border-slate-700">
             <div className="flex-1">
-              <p className="flex-1 text-center border-black font-bold text-xl hover:cursor-pointer">Groups</p>
+              <p className="text-center font-bold text-xl hover:cursor-pointer">Groups</p>
             </div>
             <p className="h-full border border-black"></p>
             <div className="flex-1 bg-slate-500 h-full flex justify-center items-center">
@@ -50,17 +64,17 @@ export default function Chat() {
           </div>
           {Object.keys(onlinePeople).map((userId: any) => {
             return (
-              <div className="w-full bg-slate-700 h-14  border-b border-black flex gap-3 pl-2" key={userId}>
-                <section>Photo</section>
-                <section className="h-full w-full pl-2">
-                  <p className="flex flex-col justify-center text-2xl font-bold items-start">{onlinePeople[userId]}</p>
-                  <p>Last message</p>
-                </section>
-              </div>
+              <OnlineUser
+                key={userId}
+                selectedUserId={selectedUserId}
+                selectContact={selectContact}
+                userId={userId}
+                username={onlinePeople[userId]}
+              />
             )
           })}
         </section>
-        <section className="w-full h-[100vh] flex flex-col">
+        <section className="w-full h-full flex flex-col">
           <div className="h-16 border-b border-black pl-8 bg-slate-700 text-white flex items-center">
             <p className="w-fit text-2xl font-bold">Contact name</p>
           </div>
