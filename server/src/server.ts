@@ -4,6 +4,7 @@ import mongoose, { connection } from 'mongoose'
 import * as jwt from 'jsonwebtoken'
 import cors from 'cors'
 import { UserModel as User } from './models/User'
+import { MessageModel as Message } from './models/Message'
 import cookieParser from 'cookie-parser'
 import bcrypt from 'bcrypt'
 import { WebSocketServer } from 'ws'
@@ -79,6 +80,8 @@ const server = app.listen(port, () => console.log(`Server running on port: http:
 
 const wss = new WebSocketServer({ server })
 wss.on('connection', (connection: any, req: any) => {
+  //* read username and id from the cookie for this connection
+
   const cookies = req.headers.cookie
   if (cookies) {
     const tokenCookieString = cookies.split(';').find((str: string) => str.startsWith('token='))
@@ -95,6 +98,30 @@ wss.on('connection', (connection: any, req: any) => {
     }
   }
 
+  connection.on('message', async (message: any) => {
+    const messageData = JSON.parse(message.toString())
+    const { recipient, text } = messageData
+    if (recipient && text) {
+      const messageDoc = await Message.create({
+        sender: connection.userId,
+        recipient: recipient,
+        text: text,
+      })
+      ;[...wss.clients]
+        .filter((c: any) => c.userId === recipient)
+        .forEach((c) =>
+          c.send(
+            JSON.stringify({
+              text,
+              sender: connection.userId,
+              id: messageDoc._id,
+            })
+          )
+        )
+    }
+  })
+
+  //* Notify everyone about online people
   ;[...wss.clients].forEach((client) => {
     client.send(
       JSON.stringify({
