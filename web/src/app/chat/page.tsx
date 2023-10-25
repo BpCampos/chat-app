@@ -1,9 +1,10 @@
 'use client'
 import OnlineUser from '@/components/OnlineUser'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AiOutlineSend } from 'react-icons/ai'
 import { BsChatLeftText } from 'react-icons/bs'
 import { uniqBy } from 'lodash'
+import { api } from '@/lib/api'
 
 interface User {
   userId: string
@@ -16,6 +17,7 @@ export default function Chat() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [newMessageText, setNewMessageText] = useState('')
   const [messages, setMessages] = useState<string[]>([])
+  const divUnderMessages = useRef<any>()
 
   useEffect(() => {
     const ws = new WebSocket('ws://localhost:3030')
@@ -23,11 +25,29 @@ export default function Chat() {
     ws.addEventListener('message', handleMessage)
   }, [])
 
-  function showOnlinePeople(peopleArray: User[]) {
+  useEffect(() => {
+    const div = divUnderMessages.current
+    if (div) {
+      div.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages])
+
+  useEffect(() => {
+    async function fetchMessages() {
+      const messages = await api.get(`/messages/${selectedUserId}`)
+      return messages
+    }
+    fetchMessages()
+  }, [selectedUserId])
+
+  async function showOnlinePeople(peopleArray: User[]) {
+    const response = await api.get('/profile')
     const people: any = {}
-    peopleArray.forEach(({ userId, username }) => {
-      people[userId] = username
-    })
+    peopleArray
+      .filter((user) => user.userId != response.data.userId)
+      .forEach(({ userId, username }) => {
+        people[userId] = username
+      })
     setOnlinePeople(people)
   }
 
@@ -36,7 +56,7 @@ export default function Chat() {
     if (messageData.online) {
       showOnlinePeople(messageData.online)
     } else if ('text' in messageData) {
-      setMessages((prev: any) => [...prev, { isOur: false, text: messageData.text }])
+      setMessages((prev: any) => [...prev, { ...messageData, isOur: false }])
     }
   }
 
@@ -53,7 +73,7 @@ export default function Chat() {
       })
     )
     setNewMessageText('')
-    setMessages((prev: any) => [...prev, { text: newMessageText, isOur: true }])
+    setMessages((prev: any) => [...prev, { text: newMessageText, isOur: true, id: Date.now() }])
   }
 
   const messagesWithoutDupes = uniqBy(messages, 'id')
@@ -61,7 +81,7 @@ export default function Chat() {
   return (
     <div className="bg-emerald-100">
       <div className="flex max-w-[1660px] h-[100vh] mx-auto border-slate-500 border">
-        <section className="w-1/4 border-r border-black bg-slate-900 text-white overflow-hidden flex flex-col">
+        <section className="w-[30%] border-r border-black bg-slate-900 text-white overflow-hidden flex flex-col">
           <div className="h-16 border-black border-b bg-slate-700 flex items-center text-3xl justify-center gap-5 pr-7">
             <div className="pt-4">
               <BsChatLeftText />
@@ -90,18 +110,23 @@ export default function Chat() {
           })}
         </section>
         {selectedUserId ? (
-          <section className="w-full h-full flex flex-col">
+          <section className="w-[80%] h-full flex flex-col">
             <div className="h-16 border-b border-black pl-8 bg-slate-700 text-white flex items-center">
               <p className="w-fit text-2xl font-bold">{`${selectedUserId ? onlinePeople[selectedUserId] : ''}`}</p>
             </div>
-            <div className="flex-1 bg-emerald-200">
+            <div className="flex-1 bg-emerald-200 overflow-y-scroll">
               {messagesWithoutDupes.map((message: any) => {
                 return (
-                  <div key={selectedUserId} className={`flex ${message.isOur ? 'justify-end' : ''}`}>
-                    <p className="text-xl bg-emerald-400 w-fit p-2 mx-4 my-7 rounded-lg">{message.text}</p>
+                  <div key={selectedUserId} className={`flex ${message.isOur ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`w-1/2 mx-10 flex ${message.isOur ? 'justify-end' : 'justify-start'}`}>
+                      <p className="text-xl w-fit bg-emerald-600 text-white p-2 my-4 rounded-lg max-w-full break-words">
+                        {message.text}
+                      </p>
+                    </div>
                   </div>
                 )
               })}
+              <div ref={divUnderMessages}></div>
             </div>
             <div className="flex bg-emerald-400 h-14 items-center justify-around">
               <div className="font-bold text-xl w-fit px-3 hover:cursor-pointer">Add File</div>
@@ -109,7 +134,7 @@ export default function Chat() {
                 <input
                   value={newMessageText}
                   onChange={(e) => setNewMessageText(e.target.value)}
-                  className="py-1.5 rounded-2xl w-full pl-3 text-lg focus:outline-none"
+                  className="py-1.5 rounded-2xl max-w-full w-full px-3 text-lg focus:outline-none"
                   type="text"
                   placeholder="Digite sua mensagem"
                 />
