@@ -31,6 +31,10 @@ app.get('/', (req, res) => {
   res.json('Hello World')
 })
 
+app.get('/messages/:userId', (req, res) => {
+  res.json(req.params)
+})
+
 app.get('/profile', async (req, res) => {
   const token = req.cookies?.token
   if (token) {
@@ -114,6 +118,7 @@ wss.on('connection', (connection: any, req: any) => {
             JSON.stringify({
               text,
               sender: connection.userId,
+              recipient,
               id: messageDoc._id,
             })
           )
