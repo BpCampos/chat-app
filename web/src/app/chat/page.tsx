@@ -20,10 +20,20 @@ export default function Chat() {
   const divUnderMessages = useRef<any>()
 
   useEffect(() => {
+    connectToWs()
+  }, [])
+
+  function connectToWs() {
     const ws = new WebSocket('ws://localhost:3030')
     setWs(ws)
     ws.addEventListener('message', handleMessage)
-  }, [])
+    ws.addEventListener('close', () => {
+      console.log('Disconnected. Trying to reconnect')
+      setTimeout(() => {
+        connectToWs()
+      }, 1000)
+    })
+  }
 
   useEffect(() => {
     const div = divUnderMessages.current
@@ -35,9 +45,11 @@ export default function Chat() {
   useEffect(() => {
     async function fetchMessages() {
       const messages = await api.get(`/messages/${selectedUserId}`)
-      return messages
+      return setMessages(messages.data)
     }
-    fetchMessages()
+    if (selectedUserId) {
+      fetchMessages()
+    }
   }, [selectedUserId])
 
   async function showOnlinePeople(peopleArray: User[]) {
@@ -73,15 +85,15 @@ export default function Chat() {
       })
     )
     setNewMessageText('')
-    setMessages((prev: any) => [...prev, { text: newMessageText, isOur: true, id: Date.now() }])
+    setMessages((prev: any) => [...prev, { text: newMessageText, id: Date.now() }])
   }
 
-  const messagesWithoutDupes = uniqBy(messages, 'id')
+  const messagesWithoutDupes = uniqBy(messages, '_id')
 
   return (
     <div className="bg-emerald-100">
       <div className="flex max-w-[1660px] h-[100vh] mx-auto border-slate-500 border">
-        <section className="w-[30%] border-r border-black bg-slate-900 text-white overflow-hidden flex flex-col">
+        <section className="w-1/4 border-r border-black bg-slate-900 text-white overflow-hidden flex flex-col">
           <div className="h-16 border-black border-b bg-slate-700 flex items-center text-3xl justify-center gap-5 pr-7">
             <div className="pt-4">
               <BsChatLeftText />
@@ -117,9 +129,15 @@ export default function Chat() {
             <div className="flex-1 bg-emerald-200 overflow-y-scroll">
               {messagesWithoutDupes.map((message: any) => {
                 return (
-                  <div key={selectedUserId} className={`flex ${message.isOur ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`w-1/2 mx-10 flex ${message.isOur ? 'justify-end' : 'justify-start'}`}>
-                      <p className="text-xl w-fit bg-emerald-600 text-white p-2 my-4 rounded-lg max-w-full break-words">
+                  <div className={`flex ${message.sender == selectedUserId ? 'justify-start' : 'justify-end'}`}>
+                    <div
+                      className={`w-1/2 mx-10 flex ${
+                        message.sender == selectedUserId ? 'justify-start' : 'justify-end'
+                      }`}>
+                      <p
+                        className={`text-xl w-fit ${
+                          message.sender == selectedUserId ? 'bg-gray-600' : 'bg-emerald-600'
+                        } text-white p-2 my-4 rounded-lg max-w-full break-words`}>
                         {message.text}
                       </p>
                     </div>
@@ -147,7 +165,7 @@ export default function Chat() {
             </div>
           </section>
         ) : (
-          <section className="w-full h-full flex justify-center items-center bg-emerald-200">
+          <section className="w-[80%] h-full flex justify-center items-center bg-emerald-200">
             <p className="text-4xl opacity-50 text-black font-bold">
               Select a contact in the left list to start a chat
             </p>
