@@ -1,5 +1,5 @@
 'use client'
-import OnlineUser from '@/components/OnlineUser'
+import Contacts from '@/components/Contacts'
 import { useEffect, useRef, useState } from 'react'
 import { AiOutlineSend } from 'react-icons/ai'
 import { BsChatLeftText } from 'react-icons/bs'
@@ -14,9 +14,12 @@ interface User {
 export default function Chat() {
   const [ws, setWs] = useState<any | WebSocket>(null)
   const [onlinePeople, setOnlinePeople] = useState<any>({})
+  const [offlinePeople, setOfflinePeople] = useState<any>({})
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [newMessageText, setNewMessageText] = useState('')
   const [messages, setMessages] = useState<string[]>([])
+  const [myId, setMyId] = useState()
+
   const divUnderMessages = useRef<any>()
 
   useEffect(() => {
@@ -43,6 +46,21 @@ export default function Chat() {
   }, [messages])
 
   useEffect(() => {
+    api.get('/people').then((res: any) => {
+      const offlinePeopleArr = res.data
+        .filter((p: any) => p._id !== myId)
+        .filter((p: any) => !Object.keys(onlinePeople).includes(p._id))
+
+      const offlinePeople: any = {}
+      offlinePeopleArr.forEach((p: any) => {
+        offlinePeople[p._id] = p
+      })
+
+      setOfflinePeople(offlinePeople)
+    })
+  }, [onlinePeople])
+
+  useEffect(() => {
     async function fetchMessages() {
       const messages = await api.get(`/messages/${selectedUserId}`)
       return setMessages(messages.data)
@@ -54,12 +72,14 @@ export default function Chat() {
 
   async function showOnlinePeople(peopleArray: User[]) {
     const response = await api.get('/profile')
+    setMyId(response.data.userId)
     const people: any = {}
     peopleArray
       .filter((user) => user.userId != response.data.userId)
       .forEach(({ userId, username }) => {
         people[userId] = username
       })
+
     setOnlinePeople(people)
   }
 
@@ -93,7 +113,7 @@ export default function Chat() {
   return (
     <div className="bg-emerald-100">
       <div className="flex max-w-[1660px] h-[100vh] mx-auto border-slate-500 border">
-        <section className="w-1/4 border-r border-black bg-slate-900 text-white overflow-hidden flex flex-col">
+        <section className="w-1/5 border-r border-black bg-slate-900 text-white overflow-hidden flex flex-col">
           <div className="h-16 border-black border-b bg-slate-700 flex items-center text-3xl justify-center gap-5 pr-7">
             <div className="pt-4">
               <BsChatLeftText />
@@ -111,25 +131,44 @@ export default function Chat() {
           </div>
           {Object.keys(onlinePeople).map((userId: any) => {
             return (
-              <OnlineUser
+              <Contacts
                 key={userId}
                 selectedUserId={selectedUserId}
                 selectContact={selectContact}
                 userId={userId}
                 username={onlinePeople[userId]}
+                online={true}
+              />
+            )
+          })}
+          {Object.keys(offlinePeople).map((userId: any) => {
+            return (
+              <Contacts
+                key={userId}
+                selectedUserId={selectedUserId}
+                selectContact={selectContact}
+                userId={userId}
+                username={offlinePeople[userId].username}
+                online={false}
               />
             )
           })}
         </section>
         {selectedUserId ? (
-          <section className="w-[80%] h-full flex flex-col">
+          <section className="w-4/5 h-full flex flex-col">
             <div className="h-16 border-b border-black pl-8 bg-slate-700 text-white flex items-center">
-              <p className="w-fit text-2xl font-bold">{`${selectedUserId ? onlinePeople[selectedUserId] : ''}`}</p>
+              <p className="w-fit text-2xl font-bold">
+                {selectedUserId == offlinePeople[selectedUserId]?._id
+                  ? offlinePeople[selectedUserId].username
+                  : onlinePeople[selectedUserId]}
+              </p>
             </div>
             <div className="flex-1 bg-emerald-200 overflow-y-scroll">
               {messagesWithoutDupes.map((message: any) => {
                 return (
-                  <div className={`flex ${message.sender == selectedUserId ? 'justify-start' : 'justify-end'}`}>
+                  <div
+                    key={message._id}
+                    className={`flex ${message.sender == selectedUserId ? 'justify-start' : 'justify-end'}`}>
                     <div
                       className={`w-1/2 mx-10 flex ${
                         message.sender == selectedUserId ? 'justify-start' : 'justify-end'
