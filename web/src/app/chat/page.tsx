@@ -1,7 +1,7 @@
 'use client'
 import Contacts from '@/components/Contacts'
 import { useEffect, useRef, useState } from 'react'
-import { AiOutlineSend } from 'react-icons/ai'
+import { AiOutlineSend, AiOutlineUser } from 'react-icons/ai'
 import { BsChatLeftText } from 'react-icons/bs'
 import { uniqBy } from 'lodash'
 import { api } from '@/lib/api'
@@ -19,6 +19,7 @@ export default function Chat() {
   const [newMessageText, setNewMessageText] = useState('')
   const [messages, setMessages] = useState<string[]>([])
   const [myId, setMyId] = useState()
+  const [myUsername, setMyUsername] = useState('')
 
   const divUnderMessages = useRef<any>()
 
@@ -73,13 +74,13 @@ export default function Chat() {
   async function showOnlinePeople(peopleArray: User[]) {
     const response = await api.get('/profile')
     setMyId(response.data.userId)
+    setMyUsername(response.data.username)
     const people: any = {}
     peopleArray
       .filter((user) => user.userId != response.data.userId)
       .forEach(({ userId, username }) => {
         people[userId] = username
       })
-
     setOnlinePeople(people)
   }
 
@@ -108,19 +109,23 @@ export default function Chat() {
     setMessages((prev: any) => [...prev, { text: newMessageText, id: Date.now() }])
   }
 
+  async function logout() {
+    await api.post('/logout')
+  }
+
   const messagesWithoutDupes = uniqBy(messages, '_id')
 
   return (
     <div className="bg-emerald-100">
       <div className="flex max-w-[1660px] h-[100vh] mx-auto border-slate-500 border">
-        <section className="w-1/5 border-r border-black bg-slate-900 text-white overflow-hidden flex flex-col">
+        <section className="  w-1/5  bg-slate-900 border-r border-black  text-white overflow-hidden flex flex-col">
           <div className="h-16 border-black border-b bg-slate-700 flex items-center text-3xl justify-center gap-5 pr-7">
             <div className="pt-4">
               <BsChatLeftText />
             </div>
             <h1 className="text-4xl font-bold">Pappo</h1>
           </div>
-          <div className="flex justify-around h-16 items-center border-b border-slate-700">
+          <div className="flex justify-around h-16 items-center border-b bg-slate-900 border-slate-700">
             <div className="flex-1">
               <p className="text-center font-bold text-xl hover:cursor-pointer">Groups</p>
             </div>
@@ -129,30 +134,44 @@ export default function Chat() {
               <p className=" text-center border-black font-bold text-xl hover:cursor-pointer">Contacts</p>
             </div>
           </div>
-          {Object.keys(onlinePeople).map((userId: any) => {
-            return (
-              <Contacts
-                key={userId}
-                selectedUserId={selectedUserId}
-                selectContact={selectContact}
-                userId={userId}
-                username={onlinePeople[userId]}
-                online={true}
-              />
-            )
-          })}
-          {Object.keys(offlinePeople).map((userId: any) => {
-            return (
-              <Contacts
-                key={userId}
-                selectedUserId={selectedUserId}
-                selectContact={selectContact}
-                userId={userId}
-                username={offlinePeople[userId].username}
-                online={false}
-              />
-            )
-          })}
+          <div className="flex-grow ">
+            {Object.keys(onlinePeople).map((userId: any) => {
+              return (
+                <Contacts
+                  key={userId}
+                  selectedUserId={selectedUserId}
+                  selectContact={selectContact}
+                  userId={userId}
+                  username={onlinePeople[userId]}
+                  online={true}
+                />
+              )
+            })}
+            {Object.keys(offlinePeople).map((userId: any) => {
+              return (
+                <Contacts
+                  key={userId}
+                  selectedUserId={selectedUserId}
+                  selectContact={selectContact}
+                  userId={userId}
+                  username={offlinePeople[userId].username}
+                  online={false}
+                />
+              )
+            })}
+          </div>
+          <div className="flex justify-around mr-3 mb-3 items-center gap-4">
+            <span className="opacity-50 flex gap-2 items-center text-4xl">
+              <AiOutlineUser />
+              <p className="font-bold text-2xl">{myUsername}</p>
+            </span>
+            <a
+              onClick={logout}
+              href="api/auth/logout"
+              className="opacity-60 hover:opacity-90 duration-150 font-bold text-xl bg-slate-800  py-2 px-3 rounded-lg">
+              Logout
+            </a>
+          </div>
         </section>
         {selectedUserId ? (
           <section className="w-4/5 h-full flex flex-col">

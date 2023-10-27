@@ -9,6 +9,14 @@ interface User {
 }
 
 export default function OnlineUser({ userId, username, selectContact, selectedUserId, online }: User) {
+  const colors = ['bg-red-600', 'bg-green-600', 'bg-cyan-600', 'bg-yellow-600', 'bg-indigo-600', 'bg-orange-600']
+
+  const userIdBase10 = parseInt(userId, 16)
+
+  const colorIndex = userIdBase10 % colors.length
+
+  const color = colors[colorIndex]
+
   return (
     <div
       onClick={() => selectContact(userId)}
@@ -20,7 +28,7 @@ export default function OnlineUser({ userId, username, selectContact, selectedUs
           className={`w-[14px] h-[14px] rounded-full ${
             online ? 'bg-green-400' : 'bg-gray-500'
           }  border border-black border-opacity-70 absolute top-[43px] right-0`}></div>
-        <span className="text-center w-[40px] h-[40px] bg-emerald-500 text-2xl pt-1 rounded-full">
+        <span className={`text-center w-[40px] h-[40px] bg- text-2xl pt-1 rounded-full ${color}`}>
           {username[0].toUpperCase()}
         </span>
       </section>
