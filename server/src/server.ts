@@ -64,6 +64,11 @@ app.get('/profile', async (req, res) => {
   }
 })
 
+app.get('/people', async (req, res) => {
+  const allUsers = await User.find({}, { _id: 1, username: 1 })
+  res.json(allUsers)
+})
+
 app.post('/login', async (req, res) => {
   const { username, password } = req.body
   const userFound = await User.findOne<string | any>({ username })
@@ -101,6 +106,12 @@ const server = app.listen(port, () => console.log(`Server running on port: http:
 
 const wss = new WebSocketServer({ server })
 wss.on('connection', (connection: any, req: any) => {
+  connection.isAlive = true
+
+  connection.timer = setInterval(() => {
+    connection.ping()
+  }, 5000)
+
   //* read username and id from the cookie for this connection
 
   const cookies = req.headers.cookie
@@ -141,14 +152,17 @@ wss.on('connection', (connection: any, req: any) => {
           )
         )
     }
-  })
+  }),
+    //* Notify everyone about online people
+    [...wss.clients].forEach((client) => {
+      client.send(
+        JSON.stringify({
+          online: [...wss.clients].map((c: any) => ({ userId: c.userId, username: c.username })),
+        })
+      )
+    })
+})
 
-  //* Notify everyone about online people
-  ;[...wss.clients].forEach((client) => {
-    client.send(
-      JSON.stringify({
-        online: [...wss.clients].map((c: any) => ({ userId: c.userId, username: c.username })),
-      })
-    )
-  })
+wss.on('close', (data: any) => {
+  console.log('disconnected')
 })
