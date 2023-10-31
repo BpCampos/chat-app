@@ -3,6 +3,7 @@ import Contacts from '@/components/Contacts'
 import { useEffect, useRef, useState } from 'react'
 import { AiOutlineSend, AiOutlineUser } from 'react-icons/ai'
 import { BsChatLeftText } from 'react-icons/bs'
+import { ImAttachment } from 'react-icons/im'
 import { uniqBy } from 'lodash'
 import { api } from '@/lib/api'
 
@@ -62,12 +63,10 @@ export default function Chat() {
   }, [onlinePeople])
 
   useEffect(() => {
-    async function fetchMessages() {
-      const messages = await api.get(`/messages/${selectedUserId}`)
-      return setMessages(messages.data)
-    }
     if (selectedUserId) {
-      fetchMessages()
+      api.get(`/messages/${selectedUserId}`).then((res) => {
+        setMessages(res.data)
+      })
     }
   }, [selectedUserId])
 
@@ -97,16 +96,35 @@ export default function Chat() {
     setSelectedUserId(userId)
   }
 
-  function sendMessage(e: any) {
-    e.preventDefault()
+  function sendMessage(e: any, file: any = null) {
+    if (e) e.preventDefault()
     ws.send(
       JSON.stringify({
         recipient: selectedUserId,
         text: newMessageText,
+        file,
       })
     )
-    setNewMessageText('')
-    setMessages((prev: any) => [...prev, { text: newMessageText, id: Date.now() }])
+
+    if (file) {
+      api.get(`/messages/${selectedUserId}`).then((res) => {
+        setMessages(res.data)
+      })
+    } else {
+      setNewMessageText('')
+      setMessages((prev: any) => [...prev, { text: newMessageText, _id: Date.now() }])
+    }
+  }
+
+  function sendFile(e: any) {
+    const reader = new FileReader()
+    reader.readAsDataURL(e.target.files[0])
+    reader.onload = () => {
+      sendMessage(null, {
+        info: e.target.files[0].name,
+        data: reader.result,
+      })
+    }
   }
 
   async function logout() {
@@ -197,6 +215,14 @@ export default function Chat() {
                           message.sender == selectedUserId ? 'bg-gray-600' : 'bg-emerald-600'
                         } text-white p-2 my-4 rounded-lg max-w-full break-words`}>
                         {message.text}
+                        {message.file && (
+                          <span className="flex items-center gap-1 border-white border-b">
+                            <ImAttachment />
+                            <a target="_blank" href={`http://localhost:3030/uploads/${message.file}`}>
+                              {message.file}
+                            </a>
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -205,8 +231,11 @@ export default function Chat() {
               <div ref={divUnderMessages}></div>
             </div>
             <div className="flex bg-emerald-400 h-14 items-center justify-around">
-              <div className="font-bold text-xl w-fit px-3 hover:cursor-pointer">Add File</div>
-              <form className="w-[90%] flex gap-4" onSubmit={sendMessage}>
+              <form className="w-full flex  justify-center items-center" onSubmit={sendMessage}>
+                <label className="font-bold  w-fit px-3 hover:cursor-pointer text-2xl mx-2">
+                  <input className="hidden" type="file" onChange={sendFile} />
+                  <ImAttachment />
+                </label>
                 <input
                   value={newMessageText}
                   onChange={(e) => setNewMessageText(e.target.value)}
@@ -216,7 +245,7 @@ export default function Chat() {
                 />
                 <button
                   type="submit"
-                  className=" right-10 bottom-3.5 font-bold text-3xl text-white bg-emerald-500 px-2">
+                  className=" right-10 py-1.5 mx-2 bottom-3.5 font-bold text-3xl text-white bg-emerald-500 px-2 rounded-lg">
                   <AiOutlineSend />
                 </button>
               </form>
