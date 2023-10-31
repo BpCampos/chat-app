@@ -1,6 +1,6 @@
 import express from 'express'
 import 'dotenv/config'
-import mongoose, { connection } from 'mongoose'
+import mongoose from 'mongoose'
 import * as jwt from 'jsonwebtoken'
 import cors from 'cors'
 import { UserModel as User } from './models/User'
@@ -8,6 +8,8 @@ import { MessageModel as Message } from './models/Message'
 import cookieParser from 'cookie-parser'
 import bcrypt from 'bcrypt'
 import { WebSocketServer } from 'ws'
+import fs from 'fs'
+import path from 'path'
 
 const mongodbConnection: string = process.env.DATABASE_URI!
 
@@ -18,6 +20,7 @@ const bcryptSalt = bcrypt.genSaltSync(10)
 const app = express()
 const port = 3030
 
+app.use('/uploads', express.static(__dirname + '/uploads'))
 app.use(express.json())
 app.use(
   cors({
@@ -101,7 +104,6 @@ app.post('/register', async (req, res) => {
       })
     })
   } catch (error) {
-    console.log(error)
     res.status(500).json('error')
   }
 })
@@ -144,12 +146,23 @@ wss.on('connection', (connection: any, req: any) => {
 
   connection.on('message', async (message: any) => {
     const messageData = JSON.parse(message.toString())
-    const { recipient, text } = messageData
-    if (recipient && text) {
+    const { recipient, text, file } = messageData
+    let filename: string | null = null
+    if (file) {
+      const extName = path.extname(file.info)
+      filename = Date.now() + extName
+      const pathName = __dirname + '/uploads/' + filename
+      const bufferData = new Buffer(file.data.split(',')[1], 'base64')
+      fs.writeFile(pathName, bufferData, () => {
+        console.log('file saved: ' + pathName)
+      })
+    }
+    if (recipient && (text || file)) {
       const messageDoc = await Message.create({
         sender: connection.userId,
         recipient: recipient,
         text: text,
+        file: file ? filename : null,
       })
       ;[...wss.clients]
         .filter((c: any) => c.userId === recipient)
@@ -159,6 +172,7 @@ wss.on('connection', (connection: any, req: any) => {
               text,
               sender: connection.userId,
               recipient,
+              file: file ? filename : null,
               _id: messageDoc._id,
             })
           )
