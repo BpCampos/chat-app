@@ -241,7 +241,7 @@ export default function Chat() {
                   onChange={(e) => setNewMessageText(e.target.value)}
                   className="py-1.5 rounded-2xl max-w-full w-full px-3 text-lg focus:outline-none"
                   type="text"
-                  placeholder="Digite sua mensagem"
+                  placeholder="Type your message"
                 />
                 <button
                   type="submit"

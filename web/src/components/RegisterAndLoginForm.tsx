@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation'
 export default function RegisterAndLogin() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [isLoggedOrRegistered, setIsLoggedOrRegistered] = useState('Register')
+  const [isLoggedOrRegistered, setIsLoggedOrRegistered] = useState('Login')
   const { setUsername: setLoggedInUser, username: loggedInUser, setId } = useContext(UserContext)
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
