@@ -31,7 +31,6 @@ export default function Chat() {
   function connectToWs() {
     const ws = new WebSocket('ws://localhost:3030')
     setWs(ws)
-    ws.addEventListener('message', handleMessage)
     ws.addEventListener('close', () => {
       console.log('Disconnected. Trying to reconnect')
       setTimeout(() => {
@@ -39,6 +38,11 @@ export default function Chat() {
       }, 1000)
     })
   }
+
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:3030')
+    ws.addEventListener('message', handleMessage)
+  }, [messages])
 
   useEffect(() => {
     const div = divUnderMessages.current
@@ -88,7 +92,9 @@ export default function Chat() {
     if (messageData.online) {
       showOnlinePeople(messageData.online)
     } else if ('text' in messageData) {
-      setMessages((prev: any) => [...prev, { ...messageData, isOur: false }])
+      if (messageData.sender === selectedUserId) {
+        setMessages((prev: any) => [...prev, { ...messageData }])
+      }
     }
   }
 
@@ -97,7 +103,9 @@ export default function Chat() {
   }
 
   function sendMessage(e: any, file: any = null) {
-    if (e) e.preventDefault()
+    if (e) {
+      e.preventDefault()
+    }
     ws.send(
       JSON.stringify({
         recipient: selectedUserId,
@@ -105,7 +113,6 @@ export default function Chat() {
         file,
       })
     )
-
     if (file) {
       api.get(`/messages/${selectedUserId}`).then((res) => {
         setMessages(res.data)
